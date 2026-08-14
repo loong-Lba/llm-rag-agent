@@ -1,3 +1,5 @@
+import json
+
 from chat.dao import HistoryDao
 from common import ResponseUtil
 
@@ -24,15 +26,29 @@ def find_history_by_id(history_id):
     result = HistoryDao.find_history_by_id(history_id)
     data_list = []
     for item in result:
-        data_list.append({
-            'role': 'user',
-            'content': item['question'],
-        })
-        data_list.append({
-            'role': 'AI',
-            'content': item['answer'],
-        })
+        question = item.get('question') or ''
+        answer = item.get('answer') or ''
+        if question:
+            data_list.append({
+                'role': 'user',
+                'content': question,
+            })
+        if answer:
+            data_list.append({
+                'role': 'assistant',
+                'content': answer,
+                'rag': _parse_rag_metadata(item.get('rag_metadata')),
+            })
     return ResponseUtil.response_json(200, 'success', data_list)
+
+
+def _parse_rag_metadata(raw_metadata):
+    if not raw_metadata:
+        return None
+    try:
+        return json.loads(raw_metadata)
+    except (TypeError, ValueError):
+        return None
 
 # 保存继续对话的结果
 def open_history_save_data(history):

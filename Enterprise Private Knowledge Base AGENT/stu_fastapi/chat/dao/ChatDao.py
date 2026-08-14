@@ -6,14 +6,20 @@ def create_new_chat(user_id):
     conn = MySQLUtil.mysql_conn()
     cur = conn.cursor()
     try:
-        sql = "INSERT INTO `history` VALUES(NULL, %s, %s, now(), %s, %s)"
-        cur.execute(sql, ['', '', 0, user_id])      # 先占位，之后再用updateHistoryById填充数据库
+        sql = """
+            INSERT INTO `history`
+                (`question`, `answer`, `create_time`, `parent_id`, `history_fk_users`, `rag_metadata`)
+            VALUES (%s, %s, NOW(), %s, %s, %s)
+        """
+        cur.execute(sql, ['', '', 0, user_id, None])
         conn.commit()
         return cur.lastrowid
     except Exception as e:
         print(e)
         conn.rollback()
         return None
+    finally:
+        MySQLUtil.mysql_close(cur, conn)
 
 
 

@@ -1,0 +1,41 @@
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Frontend dependencies and build output
+node_modules/
+dist/
+
+# IDE and OS files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Local model caches / weights
+stu_fastapi/models/
+stu_fastapi/chat/models/
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.onnx
+
+# Local vector database runtime files
+# Uncomment these if generated data should not be versioned.
+# stu_fastapi/vectors/
+# stu_fastapi/chat/vectors/

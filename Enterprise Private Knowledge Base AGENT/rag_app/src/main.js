@@ -3,6 +3,7 @@
 import Vue from 'vue'
 import App from './App'
 import router from './router'
+import './assets/signal-workbench.css'
 
 Vue.config.productionTip = false
 
@@ -56,22 +57,16 @@ Vue.prototype.$renderMarkdown = function (text) {
 // from：从哪里来
 // next：放行
 router.beforeEach((to, from, next) => {
-  // 取出登录用户名
-  let username = sessionStorage.getItem('username')
-  // 判断是否需要拦截
-  if (to.meta.isLogin) {
-    // 需要拦截 --- 判断是否登陆了，登陆了则放行，否则拦截
-    if (username) {
-      next();
-    } else {
-      // 回到登录页面
-      alert('请先登录！');
-      next('/');
-    }
-  }else {
-    // 不拦截 ---放行
-    next();
-    }
+  const username = sessionStorage.getItem('username')
+  const userId = sessionStorage.getItem('userId')
+  const requiresLogin = to.matched.some(record => record.meta.isLogin)
+
+  if (requiresLogin && (!username || !userId)) {
+    next({ path: '/', query: { reason: 'login-required' } })
+    return
+  }
+
+  next()
 });
 /* eslint-disable no-new */
 new Vue({

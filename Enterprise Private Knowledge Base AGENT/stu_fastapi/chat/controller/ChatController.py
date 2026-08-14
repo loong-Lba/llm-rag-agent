@@ -1,58 +1,77 @@
 import json
-import time
 
-from starlette.responses import StreamingResponse, HTMLResponse
+from fastapi import APIRouter, Query, Request
 from fastapi.templating import Jinja2Templates
-from chat.service import ChatService
-from fastapi import APIRouter, Request
+from starlette.responses import HTMLResponse, StreamingResponse
+
+from chat.service import ChatService, KnowledgeBaseService
+from common import ResponseUtil
 
 chat_router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
 
-# 非流式聊天
 @chat_router.get("/chatNoStream")
-def chat_no_stream(question):
+def chat_no_stream(question: str):
     return ChatService.chat_no_stream(question)
 
 
-# 流式聊天
-@chat_router.get("/chatStream")
-def chat_stream(question, history_id):
-    """
-        StreamingResponse：流式输出对象，参数：
-        1、生成器对象
-        2、媒体类型 --- 不同的返回类型数据值不一样
-    """
-    def generator():
-        for chunk in ChatService.chat_stream(question, history_id):
-            if chunk:
-                # 返回生成器对象
-                yield f"data: {json.dumps({'content': chunk})}\n\n"
-        # 响应结束
-        yield f"data: {json.dumps({'content': '[DONE]'})}\n\n"
-    return StreamingResponse(
-        content=generator(),
-        media_type="text/event-stream"
+def _encode_sse(item):
+    payload = json.dumps(item["payload"], ensure_ascii=False)
+    return "event: {event}\ndata: {payload}\n\n".format(
+        event=item["event"],
+        payload=payload,
     )
 
 
-# 访问chat_no_stream.html
+@chat_router.get("/chatStream")
+async def chat_stream(
+    request: Request,
+    question: str = Query(..., min_length=1),
+    history_id: int = Query(..., gt=0),
+    knowledge_base: str = Query(..., min_length=1),
+    request_id: str = Query(..., min_length=1, max_length=64),
+):
+    async def generator():
+        async for item in ChatService.chat_stream(
+            question,
+            history_id,
+            knowledge_base,
+            request_id,
+            request.is_disconnected,
+        ):
+            yield _encode_sse(item)
+
+    return StreamingResponse(
+        content=generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache, no-transform",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+@chat_router.get("/knowledgeBases")
+def knowledge_bases():
+    return ResponseUtil.response_json(
+        200,
+        "success",
+        KnowledgeBaseService.list_knowledge_bases(),
+    )
+
+
 @chat_router.get("/goChatNoStream", response_class=HTMLResponse)
 def go_chat_no_stream(request: Request):
-    # request：请求对象
-    # name：访问页面的名字，从templates开始算路径
     return templates.TemplateResponse(request, "chat_no_stream.html")
 
-# 访问chat_stream.html
+
 @chat_router.get("/goChatStream", response_class=HTMLResponse)
 def go_chat_stream(request: Request):
-    # request：请求对象
-    # name：访问页面的名字，从templates开始算路径
     return templates.TemplateResponse(request, "chat_stream.html")
 
-# 创建新对话
-@chat_router.post("/createNewChat")
-def create_new_chat(user_id):
-    return ChatService.create_new_chat(user_id)
 
+@chat_router.post("/createNewChat")
+def create_new_chat(user_id: int):
+    return ChatService.create_new_chat(user_id)
