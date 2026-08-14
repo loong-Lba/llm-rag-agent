@@ -1,0 +1,56 @@
+<template>
+  <div>
+    <form>
+      账号：<input type="text" placeholder="请输入账号" v-model="user.username">
+      <br>
+      密码：<input type="password" placeholder="请输入密码" v-model="user.password">
+      <br>
+      <button type="button" @click="login">登录</button>
+    </form>
+  </div>
+</template>
+
+<script>
+export default {
+  name: "",
+  data() {
+    return {
+      $serverUrlBase:this.$serverUrlBase,
+      user:{
+        username: 'lba',
+        password: '111',
+      },
+    }
+  },
+  methods: {
+    login(){
+      this.$axios({
+        url:this.$serverUrlBase + 'users/login',
+        method: 'post',
+        data:JSON.stringify(this.user),
+      }).then(res =>{
+        if(res.data.code === 200){
+          this.$message.success(res.data.msg);
+          // 登录成功把当前用户名存起来
+          sessionStorage.setItem('username',this.user.username);
+          // 添加一个延迟函数 --- 等待几秒后执行内部的内容
+          setTimeout(() =>{
+            // 跳转到聊天页面 --- chat.vue，实际上就是切换路由显示的页面
+          this.$router.push('/goChat'); // push 方法参数：配置路由的path属性值
+          },1000); //等待1000ms后执行handler参数内容
+
+        }else{
+          this.$message.error(res.data.msg);
+        }
+      })
+    }
+  },
+  mounted() {
+
+  },
+}
+</script>
+
+<style scoped>
+
+</style>
